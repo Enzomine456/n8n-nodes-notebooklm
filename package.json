@@ -1,0 +1,30 @@
+{
+  "name": "n8n-nodes-notebooklm",
+  "version": "0.2.0",
+  "description": "n8n community node para integrar com NotebookLM (NotebookLM Enterprise / API do Google).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p .",
+    "lint": "npx @n8n_io/node-dev-kit lint",
+    "test": "echo \"No tests yet\"",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "n8n",
+    "notebooklm",
+    "google",
+    "notebook-lm"
+  ],
+  "author": "Enzo Luis (Enzomine456)",
+  "license": "MIT",
+  "dependencies": {
+    "n8n-workflow": "^1.0.0",
+    "node-fetch": "^2.6.7",
+    "google-auth-library": "^8.11.0",
+    "form-data": "^4.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

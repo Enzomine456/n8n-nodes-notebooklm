@@ -1,0 +1,70 @@
+{
+  "name": "NotebookLM - Create, Upload, Ask",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "createNotebook",
+        "title": "Meu Notebook n8n"
+      },
+      "name": "Create Notebook",
+      "type": "n8n-nodes-notebooklm.notebookLm",
+      "typeVersion": 1,
+      "position": [
+        250,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "uploadDocument",
+        "notebookId": "={{$json[\"name\"] || $json[\"id\"]}}",
+        "fileProperty": "data"
+      },
+      "name": "Upload Document",
+      "type": "n8n-nodes-notebooklm.notebookLm",
+      "typeVersion": 1,
+      "position": [
+        450,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "ask",
+        "notebookId": "={{$json[\"name\"] || $json[\"id\"]}}",
+        "prompt": "D\u00e1 um resumo dos pontos principais do documento."
+      },
+      "name": "Ask Notebook",
+      "type": "n8n-nodes-notebooklm.notebookLm",
+      "typeVersion": 1,
+      "position": [
+        650,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Create Notebook": {
+      "main": [
+        [
+          {
+            "node": "Upload Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Document": {
+      "main": [
+        [
+          {
+            "node": "Ask Notebook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

@@ -1,5 +1,5 @@
 // src/NotebookLm.node.ts
-import { IExecuteFunctions } from 'n8n-core';
+import { IExecuteFunctions } from 'n8n-workflow';
 import {
   INodeExecutionData,
   INodeType,
@@ -16,7 +16,7 @@ export class NotebookLm implements INodeType {
   description: INodeTypeDescription = {
     displayName: 'NotebookLM',
     name: 'notebookLm',
-    icon: 'file:notebooklm.png',
+    icon: 'file:notebooklm.svg',
     group: ['transform'],
     version: 1,
     description: 'Interage com NotebookLM (Google / NotebookLM Enterprise).',
@@ -90,13 +90,24 @@ export class NotebookLm implements INodeType {
     const items = this.getInputData();
     const returnData: INodeExecutionData[] = [];
 
+    // Validar credenciais
     const credentials = (await this.getCredentials('notebookLmApi')) as unknown as ICredentialDataDecryptedObject;
-    const baseUrl = (credentials && (credentials.baseUrl as string)) || 'https://agents.googleapis.com/v1';
+    if (!credentials) {
+      throw new Error('Credenciais do NotebookLM não encontradas. Configure as credenciais primeiro.');
+    }
 
-    // Prepare auth
+    const baseUrl = (credentials.baseUrl as string) || 'https://agents.googleapis.com/v1';
+
+    // Preparar autenticação
     let accessToken: string | undefined;
-    if (credentials && credentials.authMethod === 'serviceAccount' && credentials.serviceAccountJson) {
-      accessToken = await getAccessTokenFromServiceAccount(credentials.serviceAccountJson as any);
+    if (credentials.authMethod === 'serviceAccount' && credentials.serviceAccountJson) {
+      try {
+        accessToken = await getAccessTokenFromServiceAccount(credentials.serviceAccountJson as any);
+      } catch (error) {
+        throw new Error(`Falha na autenticação com Service Account: ${(error as Error).message}`);
+      }
+    } else if (credentials.authMethod === 'apiKey' && !credentials.apiKey) {
+      throw new Error('API Key é obrigatória quando o método de autenticação é API Key.');
     }
 
     for (let i = 0; i < items.length; i++) {
@@ -105,65 +116,168 @@ export class NotebookLm implements INodeType {
       try {
         if (operation === 'createNotebook') {
           const title = this.getNodeParameter('title', i) as string;
-          const body = { displayName: title };
+          if (!title || title.trim() === '') {
+            throw new Error('Título do notebook é obrigatório.');
+          }
 
-          const url = credentials && credentials.authMethod === 'apiKey' && credentials.apiKey ? `${baseUrl}/notebooks?key=${encodeURIComponent(credentials.apiKey as string)}` : `${baseUrl}/notebooks`;
+          const body = { displayName: title.trim() };
+          const url = credentials.authMethod === 'apiKey' && credentials.apiKey 
+            ? `${baseUrl}/notebooks?key=${encodeURIComponent(credentials.apiKey as string)}` 
+            : `${baseUrl}/notebooks`;
+          
           const res = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+            headers: { 
+              'Content-Type': 'application/json', 
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) 
+            },
             body: JSON.stringify(body),
           });
-          if (!res.ok) throw new Error(`NotebookLM API error: ${res.status} ${await res.text()}`);
+          
+          if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`Erro ao criar notebook: ${res.status} ${errorText}`);
+          }
+          
           const json = await res.json();
           returnData.push({ json: json as IDataObject });
         } else if (operation === 'getNotebook') {
           const notebookId = this.getNodeParameter('notebookId', i) as string;
-          const url = credentials && credentials.authMethod === 'apiKey' && credentials.apiKey ? `${baseUrl}/notebooks/${encodeURIComponent(notebookId)}?key=${encodeURIComponent(credentials.apiKey as string)}` : `${baseUrl}/notebooks/${encodeURIComponent(notebookId)}`;
-          const res = await fetch(url, { headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) } });
-          if (!res.ok) throw new Error(`NotebookLM API error: ${res.status} ${await res.text()}`);
+          if (!notebookId || notebookId.trim() === '') {
+            throw new Error('ID do notebook é obrigatório.');
+          }
+
+          const url = credentials.authMethod === 'apiKey' && credentials.apiKey 
+            ? `${baseUrl}/notebooks/${encodeURIComponent(notebookId)}?key=${encodeURIComponent(credentials.apiKey as string)}` 
+            : `${baseUrl}/notebooks/${encodeURIComponent(notebookId)}`;
+          
+          const res = await fetch(url, { 
+            headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) } 
+          });
+          
+          if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`Erro ao buscar notebook: ${res.status} ${errorText}`);
+          }
+          
           returnData.push({ json: await res.json() as IDataObject });
         } else if (operation === 'ask') {
           const notebookId = this.getNodeParameter('notebookId', i) as string;
           const prompt = this.getNodeParameter('prompt', i) as string;
 
-          const endpoint = `${baseUrl}/notebooks/${encodeURIComponent(notebookId)}:query`;
-          const body = { query: prompt };
+          if (!notebookId || notebookId.trim() === '') {
+            throw new Error('ID do notebook é obrigatório.');
+          }
+          if (!prompt || prompt.trim() === '') {
+            throw new Error('Pergunta/prompt é obrigatório.');
+          }
 
-          const url = credentials && credentials.authMethod === 'apiKey' && credentials.apiKey ? `${endpoint}?key=${encodeURIComponent(credentials.apiKey as string)}` : endpoint;
+          const endpoint = `${baseUrl}/notebooks/${encodeURIComponent(notebookId)}:query`;
+          const body = { query: prompt.trim() };
+
+          const url = credentials.authMethod === 'apiKey' && credentials.apiKey 
+            ? `${endpoint}?key=${encodeURIComponent(credentials.apiKey as string)}` 
+            : endpoint;
+          
           const res = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
+            headers: { 
+              'Content-Type': 'application/json', 
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) 
+            },
             body: JSON.stringify(body),
           });
-          if (!res.ok) throw new Error(`NotebookLM API error: ${res.status} ${await res.text()}`);
+          
+          if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`Erro ao fazer pergunta: ${res.status} ${errorText}`);
+          }
+          
           returnData.push({ json: await res.json() as IDataObject });
         } else if (operation === 'uploadDocument') {
           const notebookId = this.getNodeParameter('notebookId', i) as string;
           const fileProperty = this.getNodeParameter('fileProperty', i) as string;
           const filenameParam = this.getNodeParameter('filename', i) as string;
 
-          // Get binary data from item
-          // `getBinaryDataBuffer` helper is used when available in the environment; otherwise you'll need to adapt.
-          const binary = (this.helpers && (this.helpers as any).getBinaryDataBuffer) ? (this.helpers as any).getBinaryDataBuffer(i, fileProperty) : undefined;
-          if (!binary) throw new Error(`Arquivo não encontrado na propriedade binária ${fileProperty}`);
+          if (!notebookId || notebookId.trim() === '') {
+            throw new Error('ID do notebook é obrigatório.');
+          }
+          if (!fileProperty || fileProperty.trim() === '') {
+            throw new Error('Nome da propriedade do arquivo é obrigatório.');
+          }
 
-          const mimeType = (this.helpers && (this.helpers as any).getBinaryDataMimeType) ? (this.helpers as any).getBinaryDataMimeType(i, fileProperty) : 'application/octet-stream';
-          const filename = filenameParam || ((this.helpers && (this.helpers as any).getBinaryDataOriginalName) ? (this.helpers as any).getBinaryDataOriginalName(i, fileProperty) : 'file');
+          // Obter dados binários do item
+          const binary = (this.helpers && (this.helpers as any).getBinaryDataBuffer) 
+            ? (this.helpers as any).getBinaryDataBuffer(i, fileProperty) 
+            : undefined;
+          
+          if (!binary) {
+            throw new Error(`Arquivo não encontrado na propriedade binária '${fileProperty}'. Verifique se o arquivo foi enviado corretamente.`);
+          }
 
-          const res = await uploadDocumentToNotebook(baseUrl, notebookId, binary, filename, mimeType, accessToken, credentials && credentials.authMethod === 'apiKey' ? (credentials.apiKey as string) : undefined);
-          returnData.push({ json: res as IDataObject });
+          const mimeType = (this.helpers && (this.helpers as any).getBinaryDataMimeType) 
+            ? (this.helpers as any).getBinaryDataMimeType(i, fileProperty) 
+            : 'application/octet-stream';
+          
+          const filename = filenameParam || 
+            ((this.helpers && (this.helpers as any).getBinaryDataOriginalName) 
+              ? (this.helpers as any).getBinaryDataOriginalName(i, fileProperty) 
+              : 'document');
+
+          try {
+            const res = await uploadDocumentToNotebook(
+              baseUrl, 
+              notebookId, 
+              binary, 
+              filename, 
+              mimeType, 
+              accessToken, 
+              credentials.authMethod === 'apiKey' ? (credentials.apiKey as string) : undefined
+            );
+            returnData.push({ json: res as IDataObject });
+          } catch (error) {
+            throw new Error(`Erro ao fazer upload do documento: ${(error as Error).message}`);
+          }
         } else if (operation === 'listNotebooks') {
           const endpoint = `${baseUrl}/notebooks`;
-          const url = credentials && credentials.authMethod === 'apiKey' && credentials.apiKey ? `${endpoint}?key=${encodeURIComponent(credentials.apiKey as string)}` : endpoint;
-          const res = await fetch(url, { headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) } });
-          if (!res.ok) throw new Error(`NotebookLM API error: ${res.status} ${await res.text()}`);
+          const url = credentials.authMethod === 'apiKey' && credentials.apiKey 
+            ? `${endpoint}?key=${encodeURIComponent(credentials.apiKey as string)}` 
+            : endpoint;
+          
+          const res = await fetch(url, { 
+            headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) } 
+          });
+          
+          if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`Erro ao listar notebooks: ${res.status} ${errorText}`);
+          }
+          
           returnData.push({ json: await res.json() as IDataObject });
         } else if (operation === 'deleteNotebook') {
           const notebookId = this.getNodeParameter('notebookId', i) as string;
-          const url = credentials && credentials.authMethod === 'apiKey' && credentials.apiKey ? `${baseUrl}/notebooks/${encodeURIComponent(notebookId)}?key=${encodeURIComponent(credentials.apiKey as string)}` : `${baseUrl}/notebooks/${encodeURIComponent(notebookId)}`;
-          const res = await fetch(url, { method: 'DELETE', headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) } });
-          if (!res.ok) throw new Error(`NotebookLM API error: ${res.status} ${await res.text()}`);
-          returnData.push({ json: { success: true } as IDataObject });
+          
+          if (!notebookId || notebookId.trim() === '') {
+            throw new Error('ID do notebook é obrigatório.');
+          }
+
+          const url = credentials.authMethod === 'apiKey' && credentials.apiKey 
+            ? `${baseUrl}/notebooks/${encodeURIComponent(notebookId)}?key=${encodeURIComponent(credentials.apiKey as string)}` 
+            : `${baseUrl}/notebooks/${encodeURIComponent(notebookId)}`;
+          
+          const res = await fetch(url, { 
+            method: 'DELETE', 
+            headers: { ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) } 
+          });
+          
+          if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`Erro ao deletar notebook: ${res.status} ${errorText}`);
+          }
+          
+          returnData.push({ json: { success: true, message: 'Notebook deletado com sucesso' } as IDataObject });
+        } else {
+          throw new Error(`Operação não reconhecida: ${operation}`);
         }
       } catch (error) {
         if (this.continueOnFail && this.continueOnFail()) {

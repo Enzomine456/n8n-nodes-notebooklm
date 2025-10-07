@@ -1,30 +1,78 @@
 {
   "name": "n8n-nodes-notebooklm",
-  "version": "0.2.0",
+  "version": "0.2.4",
   "description": "n8n community node para integrar com NotebookLM (NotebookLM Enterprise / API do Google).",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "notebooklm.svg",
+    "README.md",
+    "USAGE.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc -p .",
     "lint": "npx @n8n_io/node-dev-kit lint",
     "test": "echo \"No tests yet\"",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "docker:build": "docker build -t n8n-nodes-notebooklm .",
+    "docker:run": "docker run --rm -p 3000:3000 n8n-nodes-notebooklm",
+    "compose:up": "docker compose up -d",
+    "compose:down": "docker compose down",
+    "compose:logs": "docker compose logs -f",
+    "dev": "npm run build && npm run compose:up",
+    "build:n8n": "npm run build && docker build -f n8n.dockerfile -t n8n-notebooklm:latest .",
+    "run:n8n": "docker run --rm -p 5678:5678 n8n-notebooklm:latest",
+    "deploy": "npm run build:n8n && npm run run:n8n",
+    "publish:docker": "scripts/publish-docker.sh",
+    "publish:docker:win": "scripts/publish-docker.bat",
+    "quickstart": "echo Use: docker run -p 5678:5678 n8n-notebooklm:latest"
   },
   "keywords": [
     "n8n",
+    "n8n-community-node-package",
     "notebooklm",
     "google",
-    "notebook-lm"
+    "notebook-lm",
+    "ai",
+    "machine-learning"
   ],
   "author": "Enzo Luis (Enzomine456)",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Enzomine456/n8n-nodes-notebooklm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Enzomine456/n8n-nodes-notebooklm/issues"
+  },
+  "homepage": "https://github.com/Enzomine456/n8n-nodes-notebooklm#readme",
   "dependencies": {
+    "form-data": "^4.0.0",
+    "google-auth-library": "^8.9.0",
+    "n8n-nodes-notebooklm": "^0.2.4",
     "n8n-workflow": "^1.0.0",
-    "node-fetch": "^2.6.7",
-    "google-auth-library": "^8.11.0",
-    "form-data": "^4.0.0"
+    "node-fetch": "^2.6.7"
   },
   "devDependencies": {
+    "@types/node": "^24.7.0",
     "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "nodes": [
+      {
+        "name": "dist/NotebookLm.node.js"
+      }
+    ],
+    "credentials": [
+      {
+        "name": "dist/credentials/NotebookLm.credentials.js"
+      }
+    ]
   }
 }

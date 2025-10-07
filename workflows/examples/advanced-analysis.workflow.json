@@ -1,0 +1,165 @@
+{
+  "name": "NotebookLM - Análise Avançada de Documentos",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "createNotebook",
+        "title": "Análise de Relatório - {{$now.format('YYYY-MM-DD')}}"
+      },
+      "name": "Create Analysis Notebook",
+      "type": "n8n-nodes-notebooklm.notebookLm",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "operation": "uploadDocument",
+        "notebookId": "={{$json[\"name\"] || $json[\"id\"]}}",
+        "fileProperty": "data",
+        "filename": "relatorio.pdf"
+      },
+      "name": "Upload Main Document",
+      "type": "n8n-nodes-notebooklm.notebookLm",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "ask",
+        "notebookId": "={{$json[\"name\"] || $json[\"id\"]}}",
+        "prompt": "Faça um resumo executivo dos pontos principais deste documento, destacando as conclusões mais importantes."
+      },
+      "name": "Generate Executive Summary",
+      "type": "n8n-nodes-notebooklm.notebookLm",
+      "typeVersion": 1,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "operation": "ask",
+        "notebookId": "={{$json[\"name\"] || $json[\"id\"]}}",
+        "prompt": "Identifique e liste todos os números, estatísticas e métricas mencionados neste documento."
+      },
+      "name": "Extract Key Metrics",
+      "type": "n8n-nodes-notebooklm.notebookLm",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "ask",
+        "notebookId": "={{$json[\"name\"] || $json[\"id\"]}}",
+        "prompt": "Quais são as principais recomendações ou próximos passos sugeridos neste documento?"
+      },
+      "name": "Extract Recommendations",
+      "type": "n8n-nodes-notebooklm.notebookLm",
+      "typeVersion": 1,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "operation": "ask",
+        "notebookId": "={{$json[\"name\"] || $json[\"id\"]}}",
+        "prompt": "Identifique possíveis riscos, problemas ou áreas de preocupação mencionadas no documento."
+      },
+      "name": "Identify Risks",
+      "type": "n8n-nodes-notebooklm.notebookLm",
+      "typeVersion": 1,
+      "position": [650, 500]
+    },
+    {
+      "parameters": {
+        "operation": "ask",
+        "notebookId": "={{$json[\"name\"] || $json[\"id\"]}}",
+        "prompt": "Crie um índice estruturado dos tópicos principais abordados neste documento."
+      },
+      "name": "Create Document Index",
+      "type": "n8n-nodes-notebooklm.notebookLm",
+      "typeVersion": 1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Create Analysis Notebook": {
+      "main": [
+        [
+          {
+            "node": "Upload Main Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Main Document": {
+      "main": [
+        [
+          {
+            "node": "Generate Executive Summary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract Key Metrics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract Recommendations",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Identify Risks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Executive Summary": {
+      "main": [
+        [
+          {
+            "node": "Create Document Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Key Metrics": {
+      "main": [
+        [
+          {
+            "node": "Create Document Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Recommendations": {
+      "main": [
+        [
+          {
+            "node": "Create Document Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identify Risks": {
+      "main": [
+        [
+          {
+            "node": "Create Document Index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

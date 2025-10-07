@@ -1,0 +1,12 @@
+{
+  "nodes": {
+    "include": [
+      "n8n-nodes-notebooklm"
+    ]
+  },
+  "credentials": {
+    "include": [
+      "n8n-nodes-notebooklm"
+    ]
+  }
+}

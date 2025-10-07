@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-notebooklm",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "n8n community node para integrar com NotebookLM (NotebookLM Enterprise / API do Google).",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -51,7 +51,6 @@
   "dependencies": {
     "form-data": "^4.0.0",
     "google-auth-library": "^8.9.0",
-    "n8n-nodes-notebooklm": "^0.2.4",
     "n8n-workflow": "^1.0.0",
     "node-fetch": "^2.6.7"
   },
